@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Máy tính DCA XAUUSD (XLot) + PnL</title>
+<style>
+  :root{
+    --bg:#0f1222;
+    --card:#191c2e;
+    --accent:#7c5cff;
+    --muted:#aab0c0;
+    --text:#eef1f6;
+    --ok:#22c55e;
+    --bad:#ef4444;
+    --warn:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+    color:var(--text);
+    background: radial-gradient(80% 100% at 20% 0%, #171a2c 0%, var(--bg) 60%);
+    padding:20px;
+  }
+  header{
+    max-width:1200px;margin:0 auto 18px auto;padding:16px 18px;
+    background: linear-gradient(135deg,#201f3a,#15182a);
+    border:1px solid #272a42;border-radius:14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  h1{margin:0 0 6px 0;font-size:24px;letter-spacing:.3px}
+  .subtitle{color:var(--muted);font-size:14px}
+  .wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns: 400px 1fr;gap:16px}
+  @media (max-width: 980px){.wrap{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid #272a42;border-radius:14px;padding:14px;}
+  .group-title{font-weight:600;margin:4px 0 8px 0}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+  input,select,button{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #2d3150;background:#111423;color:var(--text);outline:none}
+  input:focus,select:focus{border-color:var(--accent)}
+  button{cursor:pointer;font-weight:600}
+  .primary{background:var(--accent);border-color:transparent}
+  .muted{background:#111423;border-color:#2d3150}
+  .note{color:var(--muted);font-size:12px;margin-top:8px;line-height:1.5}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th, td{padding:8px 10px;border-bottom:1px solid #2b304c;text-align:right;white-space:nowrap}
+  th{position:sticky;top:0;background:#14172a;z-index:1}
+  td:first-child, th:first-child{text-align:center}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
+  .ok{background:#16391f;color:#7ee290;border:1px solid #265c37}
+  .bad{background:#3a1b1b;color:#ffb0b0;border:1px solid #5c2c2c}
+  .warn{background:#3a2a0f;color:#ffd48a;border:1px solid #5c491f}
+  .summary{display:grid;grid-template-columns: repeat(3, 1fr);gap:10px;margin-bottom:10px}
+  .kpi{background:#15182a;border:1px solid #2b304c;border-radius:12px;padding:10px 12px}
+  .kpi .t{font-size:12px;color:#9aa1b9}
+  .kpi .v{font-weight:700;font-size:18px;margin-top:4px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;background:#111423;border:1px solid #2d3150;color:#c5cae6}
+  .money{font-variant-numeric: tabular-nums}
+  footer{max-width:1200px;margin:14px auto;color:#7b82a1;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏆 Máy tính DCA / XLot cho XAUUSD + Lãi/Lỗ</h1>
+  <div class="subtitle">Mô phỏng chuỗi vào lệnh, trung bình giá, TP ảo và lãi/lỗ tại giá hiện tại.</div>
+</header>
+
+<div class="wrap">
+  <!-- INPUT -->
+  <section class="card">
+    <div class="group-title">📊 Tham số đầu vào</div>
+    <div class="grid">
+      <div>
+        <label>Chiều giao dịch</label>
+        <select id="side">
+          <option value="long">Long (mua)</option>
+          <option value="short">Short (bán)</option>
+        </select>
+      </div>
+      <div>
+        <label>Khoảng cách giữa các lệnh ($)</label>
+        <input id="step" type="number" step="0.01" value="0.50" inputmode="decimal">
+      </div>
+
+      <div>
+        <label>Giá bắt đầu ($)</label>
+        <input id="startPrice" type="number" step="0.001" value="3900.000" inputmode="decimal">
+      </div>
+      <div>
+        <label>Giá hiện tại ($)</label>
+        <input id="currentPrice" type="number" step="0.001" value="3900.000" inputmode="decimal">
+      </div>
+
+      <div>
+        <label>Lot ban đầu</label>
+        <input id="lot0" type="number" step="0.01" value="0.01" inputmode="decimal" min="0">
+      </div>
+      <div>
+        <label>Hệ số nhân lot</label>
+        <input id="mult" type="number" step="0.01" value="1.50" inputmode="decimal" min="0">
+      </div>
+
+      <div>
+        <label>Số dòng tối đa</label>
+        <input id="maxN" type="number" step="1" value="15" inputmode="numeric" min="1">
+      </div>
+      <div>
+        <label>Pullback TP ảo ($) <span class="pill warn">từ giá trung bình</span></label>
+        <input id="pullback" type="number" step="0.01" value="2.00" inputmode="decimal" min="0">
+      </div>
+
+      <div>
+        <label>Giá trị $/lot cho XAU (per $)</label>
+        <input id="usdPerLotPerDollar" type="number" step="1" value="100" inputmode="numeric" min="0">
+      </div>
+      <div>
+        <label>Phí/Spread (USD mỗi lot, 2 chiều) <span class="pill warn">tuỳ chọn</span></label>
+        <input id="feePerLot" type="number" step="0.01" value="0.00" inputmode="decimal" min="0">
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <span class="badge" id="badgeSide">Trạng thái: Long</span>
+      <button class="primary" id="calcBtn">Tính toán</button>
+      <button class="muted" id="csvBtn">Xuất CSV</button>
+    </div>
+    <p class="note">
+      • Entry i: Long rải xuống / Short rải lên theo bước $.<br/>
+      • PnL = (Giá hiện tại − Giá vào) × lot × $/lot/$ − phí. (Short đảo dấu).<br/>
+      • PnL @ ±PB = ±Pullback × Tổng lot × $/lot/$ − phí × Tổng lot (đối xứng tuyệt đối).<br/>
+      • Mặc định 1 lot XAUUSD: $1 dịch chuyển = 100$.
+    </p>
+  </section>
+
+  <!-- OUTPUT -->
+  <section class="card">
+    <div class="group-title">📈 Kết quả</div>
+
+    <div class="summary" id="summary">
+      <div class="kpi"><div class="t">Tổng lot</div><div class="v" id="kpiLots">0</div></div>
+      <div class="kpi"><div class="t">Giá trung bình</div><div class="v" id="kpiAvg">0</div></div>
+      <div class="kpi"><div class="t">PnL hiện tại</div><div class="v money" id="kpiPnl">0</div></div>
+    </div>
+
+    <div style="max-height:60vh;overflow:auto;border-radius:10px;">
+      <table id="tbl" aria-label="Bảng mô phỏng DCA">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Giá</th>
+            <th>Lot</th>
+            <th>Tổng lot</th>
+            <th>Giá TB</th>
+            <th>TP ảo</th>
+            <th>PnL lệnh</th>
+            <th>PnL cộng dồn</th>
+            <th>PnL @ +PB</th>
+            <th>PnL @ −PB</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<footer>© DCA XLot mini-app.</footer>
+
+<script>
+/* ====== FORMAT ====== */
+function fmt(n, d=3){
+  return Number(n).toLocaleString('vi-VN', {minimumFractionDigits:d, maximumFractionDigits:d});
+}
+function fmtMoney(x, digits=2, {withPill=true, currency='$'} = {}){
+  const sign = x < 0 ? '−' : (x > 0 ? '+' : '');
+  const absV = Math.abs(x).toLocaleString('vi-VN', {minimumFractionDigits:digits, maximumFractionDigits:digits});
+  const txt  = `${sign}${absV}${currency}`;
+  if(!withPill) return `<span class="money">${txt}</span>`;
+  const cls = x > 0 ? 'ok' : (x < 0 ? 'bad' : 'warn');
+  return `<span class="pill ${cls} money">${txt}</span>`;
+}
+
+/* ====== STATE ====== */
+let lastRows = []; // dữ liệu thô để xuất CSV
+
+/* ====== CORE ====== */
+function compute(){
+  const side   = document.getElementById('side').value; // long/short
+  const step   = Math.max(0, parseFloat(document.getElementById('step').value||0));
+  const P0     = parseFloat(document.getElementById('startPrice').value||0);
+  const Pc     = parseFloat(document.getElementById('currentPrice').value||0);
+  const lot0   = Math.max(0, parseFloat(document.getElementById('lot0').value||0));
+  const mult   = Math.max(0, parseFloat(document.getElementById('mult').value||0));
+  const maxN   = Math.max(1, parseInt(document.getElementById('maxN').value||1,10));
+  const pb     = Math.max(0, parseFloat(document.getElementById('pullback').value||0));
+  const usdPerLotPerDollar = Math.max(0, parseFloat(document.getElementById('usdPerLotPerDollar').value||0));
+  const feePerLot = Math.max(0, parseFloat(document.getElementById('feePerLot').value||0));
+
+  // cập nhật badge
+  document.getElementById('badgeSide').textContent = `Trạng thái: ${side==='long'?'Long':'Short'}`;
+
+  const tbody = document.querySelector('#tbl tbody');
+  tbody.innerHTML='';
+  lastRows = [];
+
+  let sumLot = 0;
+  let sumPxLot = 0;
+  let pnlCum = 0;
+
+  for(let i=0;i<maxN;i++){
+    const lot = lot0 * Math.pow(mult, i);
+
+    // Giá từng lệnh theo chiều
+    const price = side==='long' ? (P0 - i*step) : (P0 + i*step);
+
+    sumLot += lot;
+    sumPxLot += price * lot;
+    const avg = sumPxLot / sumLot;
+
+    const tp = side==='long' ? avg + pb : avg - pb;
+
+    // PnL *lệnh i* tại giá hiện tại
+    const rawMove = (side==='long') ? (Pc - price) : (price - Pc);
+    const pnlOrder = rawMove * lot * usdPerLotPerDollar - feePerLot * lot;
+    pnlCum += pnlOrder;
+
+    // PnL đối xứng quanh AVG tại ±pullback cho *toàn cụm*
+    const pnlAtPlusPB_total  = ( (side==='long') ? (tp - avg) : (avg - tp) ) * sumLot * usdPerLotPerDollar - feePerLot * sumLot; // = pb * sumLot * usd - fee*sumLot
+    const pnlAtMinusPB_total = -pnlAtPlusPB_total; // đối xứng tuyệt đối
+
+    // Lưu CSV
+    lastRows.push({
+      idx: i+1,
+      price, lot, sumLot, avg, tp,
+      pnlOrder, pnlCum,
+      pnlAtPlusPB_total, pnlAtMinusPB_total
+    });
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td>${fmt(price,3)}</td>
+      <td>${fmt(lot,2)}</td>
+      <td>${fmt(sumLot,2)}</td>
+      <td>${fmt(avg,3)}</td>
+      <td>${fmt(tp,3)}</td>
+      <td>${fmtMoney(pnlOrder,2)}</td>
+      <td>${fmtMoney(pnlCum,2)}</td>
+      <td>${fmtMoney(pnlAtPlusPB_total,2)}</td>
+      <td>${fmtMoney(pnlAtMinusPB_total,2)}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  // KPI tổng (tại giá hiện tại)
+  const avgAll = sumPxLot / sumLot;
+  const pnlAllNow = ((side==='long') ? (Pc - avgAll) : (avgAll - Pc)) * sumLot * usdPerLotPerDollar - feePerLot * sumLot;
+
+  document.getElementById('kpiLots').innerHTML = fmt(sumLot,2);
+  document.getElementById('kpiAvg').innerHTML  = fmt(avgAll,3);
+  const pnlElem = document.getElementById('kpiPnl');
+  pnlElem.innerHTML = fmtMoney(pnlAllNow,2,{withPill:false});
+  pnlElem.style.color = pnlAllNow>=0 ? '#7ee290' : '#ffb0b0';
+}
+
+/* ====== EVENTS ====== */
+document.getElementById('calcBtn').addEventListener('click', compute);
+['side','step','startPrice','currentPrice','lot0','mult','maxN','pullback','usdPerLotPerDollar','feePerLot']
+  .forEach(id=>document.getElementById(id).addEventListener('input', compute));
+
+document.getElementById('csvBtn').addEventListener('click', ()=>{
+  // CSV từ dữ liệu thô để giữ dấu âm/dương chuẩn, không kèm ký hiệu hiển thị
+  const rows = [['#','Gia','Lot','TongLot','GiaTB','TPao','PnL_lenh','PnL_cogdon','PnL_plusPB','PnL_minusPB']];
+  lastRows.forEach(r=>{
+    rows.push([
+      r.idx,
+      r.price.toFixed(3),
+      r.lot.toFixed(2),
+      r.sumLot.toFixed(2),
+      r.avg.toFixed(3),
+      r.tp.toFixed(3),
+      r.pnlOrder.toFixed(2),
+      r.pnlCum.toFixed(2),
+      r.pnlAtPlusPB_total.toFixed(2),
+      r.pnlAtMinusPB_total.toFixed(2),
+    ]);
+  });
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'dca_xlot_pnl.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* init */
+compute();
+</script>
+</body>
+</html>
